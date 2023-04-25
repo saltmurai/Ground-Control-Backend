@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package mission.v1;
+
+option go_package = "github.com/saltmurai/drone-api-service/missionv1";
+
+service MissionService {
+	// Send a mission to the drone.
+	rpc SendMission (SendMissionRequest) returns (SendMissionResult) {}
+	// Send a single instruction to the drone.
+}
+
+enum Termination {
+	TERMINATION_AUTO = 0;
+	TERMINATION_STD = 1;
+}
+
+enum Action {
+	ACTION_LAND = 0;
+	ACTION_TAKEOFF = 1;
+	ACTION_RELEASE = 2;
+	ACTION_DISARM = 4;
+	ACTION_SELFCHECK = 5;
+}
+
+enum Planner {
+	PLANNER_EGO = 0;
+	PLANNER_MARKER = 1;
+}
+
+enum Controller {
+	CONTROLLER_PX4_VELO_FB = 0;
+}
+
+message InitInstruction {
+  // Define a repeated field of integers for the peripheral devices.
+  repeated int32 peripheral = 1;
+  // Define a string field for the controller.
+  Controller controller = 2;
+  // Define a string field for the standard.
+  Termination terminate = 3;
+}
+
+// Define the message for the TRAVEL instruction.
+message TravelInstruction {
+  // Define a float field for the distance.
+	Planner planner = 1;
+	repeated double waypoint = 2;
+	repeated double constraint = 3;
+
+	// Define a string field for the standard. 
+	Termination terminate = 4;
+
+}
+
+// Define the message for the ACTION instruction.
+message ActionInstruction {
+  // Define a string field for the action type.
+  Action action = 1;
+  // This field is optionals only for release command. If it is not populated, the default value is 0.
+  repeated int32 package = 2;
+	// For takoff, land. Optional. If not populated, the default value is 0.
+	double param = 3;
+}
+
+// Define the message for a mission, which is a sequence of INIT, TRAVEL,
+// and ACTION instructions.
+message SendMissionRequest {
+  // Define a unique ID for the mission.
+  string id = 1;
+  // Define a repeated field of INIT instructions.
+  repeated InitInstruction init_instructions = 2;
+  // Define a repeated field of TRAVEL instructions.
+  repeated TravelInstruction travel_instructions = 3;
+  // Define a repeated field of ACTION instructions.
+  repeated ActionInstruction action_instructions = 4;
+}
+
+
+// For manual control
+message SingleInstruction {
+  // Define an enum to represent the different types of instructions.
+  enum InstructionType {
+    INSTRUCTION_TYPE_INIT_UNSPECIFIED = 0;
+    INSTRUCTION_TYPE_TRAVEL = 1;
+    INSTRUCTION_TYPE_ACTION = 2;
+  }
+
+  // Define a field for the instruction type.
+  InstructionType type = 1;
+
+  // Define optional fields for the INIT, TRAVEL, and ACTION instructions.
+  // Only one of these fields should be populated for any given instruction.
+  // The Mission field should not be populated if any of these fields are
+  // populated.
+  InitInstruction init = 2;
+  TravelInstruction travel = 3;
+  ActionInstruction action = 4;
+}
+
+message SendMissionResult {
+  // Define a boolean field to indicate success or failure.
+  bool success = 1;
+  // Define a string field for any error messages.
+  string error_message = 2;
+}
