@@ -69,13 +69,12 @@ message SendMissionRequest {
   // Define a unique ID for the mission.
   string id = 1;
   // Define a repeated field of INIT instructions.
-  repeated InitInstruction init_instructions = 2;
+  InitInstruction init_instructions = 2;
   // Define a repeated field of TRAVEL instructions.
-  repeated TravelInstruction travel_instructions = 3;
+  TravelInstruction travel_instructions = 3;
   // Define a repeated field of ACTION instructions.
-  repeated ActionInstruction action_instructions = 4;
+  ActionInstruction action_instructions = 4;
 }
-
 
 // For manual control
 message SingleInstruction {
