@@ -4,24 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/go-chi/chi/v5"
+
 	missionv1 "github.com/saltmurai/drone-api-service/gen/mission/v1"
 	"github.com/saltmurai/drone-api-service/gen/mission/v1/missionv1connect"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
-
-type timeHandler struct {
-	format string
-}
-
-func (th timeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	tm := time.Now().Format(th.format)
-	w.Write([]byte("The time is: " + tm))
-}
 
 type MissionServer struct {
 	missionv1connect.UnimplementedMissionServiceHandler
@@ -44,22 +36,20 @@ func (s *MissionServer) SendMission(
 }
 
 func main() {
-	// init system logger
 	log, _ := zap.NewProduction()
 	defer log.Sync()
 	sugar := log.Sugar()
 	sugar.Infof("Starting server on 8080")
-
 	missioner := &MissionServer{}
 	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("testing"))
+	})
 	path, handler := missionv1connect.NewMissionServiceHandler(missioner)
 	mux.Handle(path, handler)
-
-	th := timeHandler{format: time.RFC1123}
-
-	mux.Handle("/time", th)
-
-	err := http.ListenAndServe("localhost:3000", h2c.NewHandler(mux, &http2.Server{}))
+	mux.Handle("/", r)
+	err := http.ListenAndServe(":3002", h2c.NewHandler(mux, &http2.Server{}))
 	if err != nil {
 		sugar.Error(err)
 	}
