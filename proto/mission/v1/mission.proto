@@ -7,7 +7,6 @@ option go_package = "github.com/saltmurai/drone-api-service/missionv1";
 service MissionService {
 	// Send a mission to the drone.
 	rpc SendMission (SendMissionRequest) returns (SendMissionResult) {}
-	// Send a single instruction to the drone.
 }
 
 enum Termination {
@@ -65,15 +64,20 @@ message ActionInstruction {
 
 // Define the message for a mission, which is a sequence of INIT, TRAVEL,
 // and ACTION instructions.
+
+message SequenceItem {
+  oneof sequence {
+    InitInstruction init_sequence = 1;
+    ActionInstruction action_sequence = 2;
+    TravelInstruction travel_sequence = 3;
+  }
+}
+
+
 message SendMissionRequest {
   // Define a unique ID for the mission.
   string id = 1;
-  // Define a repeated field of INIT instructions.
-  InitInstruction init_instructions = 2;
-  // Define a repeated field of TRAVEL instructions.
-  TravelInstruction travel_instructions = 3;
-  // Define a repeated field of ACTION instructions.
-  ActionInstruction action_instructions = 4;
+	repeated SequenceItem sequence_items = 2;
 }
 
 // For manual control

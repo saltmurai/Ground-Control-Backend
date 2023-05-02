@@ -1,0 +1,1 @@
+{"id": "3", "sequence_items" : [{"init_sequence" : {"peripheral": [1,2,3], "controller" : "CONTROLLER_PX4_VELO_FB"}}, {"init_sequence" : {"peripheral": [1,2,3], "controller" : "CONTROLLER_PX4_VELO_FB"}}]}

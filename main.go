@@ -24,11 +24,11 @@ func (s *MissionServer) SendMission(
 	req *connect.Request[missionv1.SendMissionRequest],
 ) (*connect.Response[missionv1.SendMissionResult], error) {
 	id := req.Msg.GetId()
-	init := req.Msg.GetInitInstructions()
-	travel := req.Msg.GetTravelInstructions()
-	fmt.Println(init.ProtoReflect())
-	action := req.Msg.GetActionInstructions()
-	fmt.Printf("Got %s %+v %v %v\n", id, init, travel, action)
+	seq := req.Msg.SequenceItems
+	for _, item := range seq {
+		fmt.Println(item.GetSequence())
+	}
+	fmt.Printf("Got %s sequence", id)
 	return connect.NewResponse(&missionv1.SendMissionResult{
 		Success:      true,
 		ErrorMessage: "none",
