@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 )
 
+// MissionServer is an interface for the missionn define in proto file
 type MissionServer struct {
 	missionv1connect.UnimplementedMissionServiceHandler
 }
@@ -28,10 +29,10 @@ func (s *MissionServer) SendMission(
 	for _, item := range seq {
 		fmt.Println(item.GetSequence())
 	}
-	fmt.Printf("Got %s sequence", id)
+
 	return connect.NewResponse(&missionv1.SendMissionResult{
-		Success:      true,
-		ErrorMessage: "none",
+		Success: true,
+		Message: fmt.Sprintf("Send mission id %s with %d sequences", id, len(seq)),
 	}), nil
 }
 

@@ -104,6 +104,7 @@ message SingleInstruction {
 message SendMissionResult {
   // Define a boolean field to indicate success or failure.
   bool success = 1;
+	string message = 2;
   // Define a string field for any error messages.
-  string error_message = 2;
+  string error_message = 3;
 }
