@@ -80,25 +80,9 @@ message SendMissionRequest {
 	repeated SequenceItem sequence_items = 2;
 }
 
-// For manual control
+// For later use. Sending single instruction only
 message SingleInstruction {
-  // Define an enum to represent the different types of instructions.
-  enum InstructionType {
-    INSTRUCTION_TYPE_INIT_UNSPECIFIED = 0;
-    INSTRUCTION_TYPE_TRAVEL = 1;
-    INSTRUCTION_TYPE_ACTION = 2;
-  }
-
-  // Define a field for the instruction type.
-  InstructionType type = 1;
-
-  // Define optional fields for the INIT, TRAVEL, and ACTION instructions.
-  // Only one of these fields should be populated for any given instruction.
-  // The Mission field should not be populated if any of these fields are
-  // populated.
-  InitInstruction init = 2;
-  TravelInstruction travel = 3;
-  ActionInstruction action = 4;
+	SequenceItem sequence_item = 1;
 }
 
 message SendMissionResult {
