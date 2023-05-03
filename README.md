@@ -43,7 +43,7 @@ make lint
   
   Using curl to send a mission sequence to the backend.
   
-  ```json
+  ```
   curl --request POST \
     --url http://localhost:3002/mission.v1.MissionService/SendMission \
     --header 'Content-Type: application/json' \
