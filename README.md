@@ -4,7 +4,7 @@ This repo consist of backend for the Ground control station and communication mo
 
 ---
 
-Presquites: Go >= 1.18. See the installation instruction [here]([Download and install - The Go Programming Language](https://go.dev/doc/install))
+Presquites: Go >= 1.18. See the installation instruction ([Download and install - The Go Programming Language](https://go.dev/doc/install))
 
 ## How to run:
 
@@ -14,26 +14,26 @@ Presquites: Go >= 1.18. See the installation instruction [here]([Download and in
 go run main.go 
 ```
 
-**Build the program**
+**Build and run the program**
 
 ```
 go build main.go
 ./main
 ```
 
-**Or to run linting and formating**
+**run linting and formating**
 
 ```
-make build
+make lint
 ```
 
 ---
 
 ## Status:
 
-- Define protobuf message for interchange communication between different program (like communication service, control service and front end). This file should be share between different codebase for this project.
+- Defined proto file for interchange communication between different program (like communication service, control service and front end). This file should be share between different codebase for this project.
   
-- Implement MissionServer that can be invoke by using gRPC protocol or traditional HTTP 1.1 work as well.
+- Implemented MissionServer that can be invoke by using gRPC protocol or traditional HTTP 1.1 work as well.
   
   ---
   
