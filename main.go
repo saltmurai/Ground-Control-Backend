@@ -40,7 +40,7 @@ func main() {
 	log, _ := zap.NewProduction()
 	defer log.Sync()
 	sugar := log.Sugar()
-	sugar.Infof("Starting server on 8080")
+	sugar.Infof("Starting server on 3002")
 	missioner := &MissionServer{}
 	mux := http.NewServeMux()
 	r := chi.NewRouter()
