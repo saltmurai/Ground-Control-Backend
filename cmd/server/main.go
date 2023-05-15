@@ -4,11 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/protobuf/proto"
 
 	_ "github.com/lib/pq"
 	missionv1 "github.com/saltmurai/drone-api-service/gen/mission/v1"
@@ -22,16 +26,31 @@ import (
 // MissionServer is an interface for the missionn define in proto file
 type MissionServer struct {
 	missionv1connect.UnimplementedMissionServiceHandler
+	db *gendb.Queries
+	l  *zap.Logger
 }
 
 func (s *MissionServer) SendMission(
 	ctx context.Context,
 	req *connect.Request[missionv1.SendMissionRequest],
 ) (*connect.Response[missionv1.SendMissionResult], error) {
+	mes := req.Msg
+	buf, err := proto.Marshal(mes)
+	if err != nil {
+		s.l.Sugar().Error(err)
+	}
+	err = ioutil.WriteFile("output.bin", buf, 0644)
+	if err != nil {
+		s.l.Sugar().Error(err)
+	}
+	fmt.Println(buf)
+
 	id := req.Msg.GetId()
 	seq := req.Msg.SequenceItems
-	for _, item := range seq {
-		fmt.Println(item.GetSequence())
+
+	err = DialComm(&buf, s.l)
+	if err != nil {
+		s.l.Sugar().Error(err)
 	}
 
 	return connect.NewResponse(&missionv1.SendMissionResult{
@@ -41,7 +60,7 @@ func (s *MissionServer) SendMission(
 }
 
 func main() {
-	ctx := context.Background()
+	// ctx := context.Background()
 
 	log, _ := zap.NewProduction()
 	defer log.Sync()
@@ -55,27 +74,15 @@ func main() {
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		sugar.Errorf("Can't connect to postgres: %s", err)
+		return
 	}
 	defer db.Close()
 
 	queries := gendb.New(db)
-	mission_name := "foo bar"
-	nullMissionName := sql.NullString{
-		String: mission_name,
-		Valid:  true,
+	missioner := &MissionServer{
+		l:  log,
+		db: queries,
 	}
-	insertMission, err := queries.CreateMission(ctx, nullMissionName)
-	if err != nil {
-		sugar.Error(err)
-	}
-	sugar.Info(insertMission)
-
-	listMissions, err := queries.ListMission(ctx)
-	if err != nil {
-		sugar.Error(err)
-	}
-	sugar.Info(listMissions)
-	missioner := &MissionServer{}
 	mux := http.NewServeMux()
 	r := chi.NewRouter()
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
@@ -89,4 +96,38 @@ func main() {
 	if err != nil {
 		sugar.Error(err)
 	}
+}
+
+func DialComm(buf *[]byte, l *zap.Logger) error {
+	commConn, err := net.Dial("tcp4", "localhost:3003")
+	if err != nil {
+		l.Sugar().Error(err)
+		return err
+	}
+	defer commConn.Close()
+
+	_, err = commConn.Write(*buf)
+	if err != nil {
+		l.Sugar().Error(err)
+		return err
+	}
+
+	resp := make([]byte, 0)
+	buffer := make([]byte, 1024)
+
+	for {
+		n, err := commConn.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			l.Sugar().Error(err)
+			return err
+		}
+		resp = append(resp, buffer[:n]...)
+	}
+
+	l.Sugar().Info(string(resp))
+
+	return nil
 }

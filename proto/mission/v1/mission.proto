@@ -6,36 +6,44 @@ option go_package = "github.com/saltmurai/drone-api-service/missionv1";
 
 service MissionService {
 	// Send a mission to the drone.
-	rpc SendMission (SendMissionRequest) returns (SendMissionResult) {}
+	rpc SendMission (SendMissionRequest) returns (SendMissionResponse) {}
 }
 
 enum Termination {
-	TERMINATION_AUTO = 0;
-	TERMINATION_STD = 1;
+	TERMINATION_UNSPECIFIED = 0;
+	TERMINATION_AUTO = 1;
+	TERMINATION_STD = 2;
 }
 
 enum Action {
-	ACTION_TAKEOFF = 0;
-	ACTION_DISARM = 1;
-	ACTION_SELFCHECK = 2;
-	ACTION_RELEASE = 3;
-	ACTION_RTLHOME = 4;
-	ACTION_HOLD = 5;
-	ACTION_AUTOLAND = 6; 
+	ACTION_UNSPECIFIED = 0;
+	ACTION_TAKEOFF = 1;
+	ACTION_DISARM = 2;
+	ACTION_SELFCHECK = 3;
+	ACTION_RELEASE = 4;
+	ACTION_RTLHOME = 5;
+	ACTION_HOLD = 6;
+	ACTION_AUTOLAND = 7; 
 }
 
 enum Planner {
-	PLANNER_EGO = 0;
-	PLANNER_FAST = 1;
+	PLANNER_UNSPECIFIED = 0;
+	PLANNER_EGO = 1;
+	PLANNER_FAST = 2;
 	PLANNER_MARKER = 3;
 	PLANNER_SAFELAND = 4;
 }
 
 enum Controller {
-	CONTROLLER_PX4_VELO_FB = 0;
-	CONTROLLER_A_FB = 1;
-	CONTROLLER_A_FW = 2;
-	CONTROLLER_A_ADRJ = 3;
+	CONTROLLER_UNSPECIFIED = 0;
+	CONTROLLER_PX4_VELO_FB = 1;
+	CONTROLLER_A_FB = 2;
+	CONTROLLER_A_FW = 3;
+	CONTROLLER_A_ADRJ = 4;
+}
+
+message vector3 {
+	repeated double vector = 1;
 }
 
 message InitInstruction {
@@ -51,8 +59,8 @@ message InitInstruction {
 message TravelInstruction {
   // Define a float field for the distance.
 	Planner planner = 1;
-	repeated double waypoint = 2;
-	repeated double constraint = 3;
+	repeated vector3 waypoint = 2;
+	repeated vector3 constraint = 3;
 
 	// Define a string field for the standard. 
 	Termination terminate = 4;
@@ -84,7 +92,10 @@ message SequenceItem {
 message SendMissionRequest {
   // Define a unique ID for the mission.
   string id = 1;
-	repeated SequenceItem sequence_items = 2;
+	int32 length = 2;
+	string description = 3;
+	repeated SequenceItem sequence_items = 4;
+
 }
 
 // For later use. Sending single instruction only
@@ -92,7 +103,7 @@ message SingleInstruction {
 	SequenceItem sequence_item = 1;
 }
 
-message SendMissionResult {
+message SendMissionResponse {
   // Define a boolean field to indicate success or failure.
   bool success = 1;
 	string message = 2;
