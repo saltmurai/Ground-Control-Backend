@@ -3,16 +3,17 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/go-chi/chi/v5"
-	"google.golang.org/protobuf/proto"
+	"github.com/rs/cors"
+	pbjs "google.golang.org/protobuf/encoding/protojson"
 
 	_ "github.com/lib/pq"
 	missionv1 "github.com/saltmurai/drone-api-service/gen/mission/v1"
@@ -33,27 +34,26 @@ type MissionServer struct {
 func (s *MissionServer) SendMission(
 	ctx context.Context,
 	req *connect.Request[missionv1.SendMissionRequest],
-) (*connect.Response[missionv1.SendMissionResult], error) {
+) (*connect.Response[missionv1.SendMissionResponse], error) {
 	mes := req.Msg
-	buf, err := proto.Marshal(mes)
+	data, err := pbjs.Marshal(mes)
 	if err != nil {
 		s.l.Sugar().Error(err)
 	}
-	err = ioutil.WriteFile("output.bin", buf, 0644)
-	if err != nil {
-		s.l.Sugar().Error(err)
-	}
-	fmt.Println(buf)
+	fmt.Println(string(data))
+	jsonString := &missionv1.SendMissionRequest{}
+	json.Unmarshal(data, jsonString)
+	fmt.Print(jsonString)
 
 	id := req.Msg.GetId()
 	seq := req.Msg.SequenceItems
 
-	err = DialComm(&buf, s.l)
-	if err != nil {
-		s.l.Sugar().Error(err)
-	}
+	// err = DialComm(&buf, s.l)
+	// if err != nil {
+	// 	s.l.Sugar().Error(err)
+	// }
 
-	return connect.NewResponse(&missionv1.SendMissionResult{
+	return connect.NewResponse(&missionv1.SendMissionResponse{
 		Success: true,
 		Message: fmt.Sprintf("Send mission id %s with %d sequences", id, len(seq)),
 	}), nil
@@ -83,6 +83,7 @@ func main() {
 		l:  log,
 		db: queries,
 	}
+
 	mux := http.NewServeMux()
 	r := chi.NewRouter()
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +93,9 @@ func main() {
 	mux.Handle(path, handler)
 	mux.Handle("/", r)
 
-	err = http.ListenAndServe(":3002", h2c.NewHandler(mux, &http2.Server{}))
+	server := cors.AllowAll().Handler(mux)
+
+	err = http.ListenAndServe(":3002", h2c.NewHandler(server, &http2.Server{}))
 	if err != nil {
 		sugar.Error(err)
 	}

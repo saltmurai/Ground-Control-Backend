@@ -41,7 +41,7 @@ const (
 // MissionServiceClient is a client for the mission.v1.MissionService service.
 type MissionServiceClient interface {
 	// Send a mission to the drone.
-	SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResult], error)
+	SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResponse], error)
 }
 
 // NewMissionServiceClient constructs a client for the mission.v1.MissionService service. By
@@ -54,7 +54,7 @@ type MissionServiceClient interface {
 func NewMissionServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) MissionServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &missionServiceClient{
-		sendMission: connect_go.NewClient[v1.SendMissionRequest, v1.SendMissionResult](
+		sendMission: connect_go.NewClient[v1.SendMissionRequest, v1.SendMissionResponse](
 			httpClient,
 			baseURL+MissionServiceSendMissionProcedure,
 			opts...,
@@ -64,18 +64,18 @@ func NewMissionServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 
 // missionServiceClient implements MissionServiceClient.
 type missionServiceClient struct {
-	sendMission *connect_go.Client[v1.SendMissionRequest, v1.SendMissionResult]
+	sendMission *connect_go.Client[v1.SendMissionRequest, v1.SendMissionResponse]
 }
 
 // SendMission calls mission.v1.MissionService.SendMission.
-func (c *missionServiceClient) SendMission(ctx context.Context, req *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResult], error) {
+func (c *missionServiceClient) SendMission(ctx context.Context, req *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResponse], error) {
 	return c.sendMission.CallUnary(ctx, req)
 }
 
 // MissionServiceHandler is an implementation of the mission.v1.MissionService service.
 type MissionServiceHandler interface {
 	// Send a mission to the drone.
-	SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResult], error)
+	SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResponse], error)
 }
 
 // NewMissionServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -96,6 +96,6 @@ func NewMissionServiceHandler(svc MissionServiceHandler, opts ...connect_go.Hand
 // UnimplementedMissionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMissionServiceHandler struct{}
 
-func (UnimplementedMissionServiceHandler) SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResult], error) {
+func (UnimplementedMissionServiceHandler) SendMission(context.Context, *connect_go.Request[v1.SendMissionRequest]) (*connect_go.Response[v1.SendMissionResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mission.v1.MissionService.SendMission is not implemented"))
 }
