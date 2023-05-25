@@ -7,39 +7,75 @@ package gendb
 
 import (
 	"context"
-	"database/sql"
 )
-
-const createMission = `-- name: CreateMission :one
-INSERT INTO missions (
-	protobuf
-) VALUES ( 
-	$1
-)
-RETURNING id, protobuf, created_at
-`
-
-func (q *Queries) CreateMission(ctx context.Context, protobuf sql.NullString) (Mission, error) {
-	row := q.db.QueryRowContext(ctx, createMission, protobuf)
-	var i Mission
-	err := row.Scan(&i.ID, &i.Protobuf, &i.CreatedAt)
-	return i, err
-}
 
 const getMission = `-- name: GetMission :one
-SELECT id, protobuf, created_at FROM missions
+SELECT id, name, drone_id, package_id, seq_id FROM missions
 WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetMission(ctx context.Context, id int64) (Mission, error) {
 	row := q.db.QueryRowContext(ctx, getMission, id)
 	var i Mission
-	err := row.Scan(&i.ID, &i.Protobuf, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DroneID,
+		&i.PackageID,
+		&i.SeqID,
+	)
+	return i, err
+}
+
+const insertDrone = `-- name: InsertDrone :one
+INSERT INTO drones (
+		id,
+		ip,
+		name
+) VALUES (
+		$1,
+		$2,
+		$3
+) RETURNING id, ip, name
+`
+
+type InsertDroneParams struct {
+	ID   int64
+	Ip   string
+	Name string
+}
+
+func (q *Queries) InsertDrone(ctx context.Context, arg InsertDroneParams) (Drone, error) {
+	row := q.db.QueryRowContext(ctx, insertDrone, arg.ID, arg.Ip, arg.Name)
+	var i Drone
+	err := row.Scan(&i.ID, &i.Ip, &i.Name)
+	return i, err
+}
+
+const insertPackage = `-- name: InsertPackage :one
+INSERT INTO packages (
+		name,
+		weight
+) VALUES (
+		$1,
+		$2
+) RETURNING id, name, weight
+`
+
+type InsertPackageParams struct {
+	Name   string
+	Weight float64
+}
+
+func (q *Queries) InsertPackage(ctx context.Context, arg InsertPackageParams) (Package, error) {
+	row := q.db.QueryRowContext(ctx, insertPackage, arg.Name, arg.Weight)
+	var i Package
+	err := row.Scan(&i.ID, &i.Name, &i.Weight)
 	return i, err
 }
 
 const listMission = `-- name: ListMission :many
-SELECT id, protobuf, created_at FROM missions
+SELECT id, name, drone_id, package_id, seq_id FROM missions
 `
 
 func (q *Queries) ListMission(ctx context.Context) ([]Mission, error) {
@@ -51,7 +87,40 @@ func (q *Queries) ListMission(ctx context.Context) ([]Mission, error) {
 	var items []Mission
 	for rows.Next() {
 		var i Mission
-		if err := rows.Scan(&i.ID, &i.Protobuf, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.DroneID,
+			&i.PackageID,
+			&i.SeqID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPackage = `-- name: ListPackage :many
+SELECT id, name, weight FROM packages
+`
+
+func (q *Queries) ListPackage(ctx context.Context) ([]Package, error) {
+	rows, err := q.db.QueryContext(ctx, listPackage)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Package
+	for rows.Next() {
+		var i Package
+		if err := rows.Scan(&i.ID, &i.Name, &i.Weight); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

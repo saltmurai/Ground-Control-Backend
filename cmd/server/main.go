@@ -12,6 +12,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang/protobuf/proto"
 	"github.com/rs/cors"
 	pbjs "google.golang.org/protobuf/encoding/protojson"
 
@@ -28,7 +29,6 @@ import (
 type MissionServer struct {
 	missionv1connect.UnimplementedMissionServiceHandler
 	db *gendb.Queries
-	l  *zap.Logger
 }
 
 func (s *MissionServer) SendMission(
@@ -36,11 +36,20 @@ func (s *MissionServer) SendMission(
 	req *connect.Request[missionv1.SendMissionRequest],
 ) (*connect.Response[missionv1.SendMissionResponse], error) {
 	mes := req.Msg
+
 	data, err := pbjs.Marshal(mes)
 	if err != nil {
-		s.l.Sugar().Error(err)
+		zap.L().Sugar().Error(err)
 	}
+
+	buf, err := proto.Marshal(mes)
+	if err != nil {
+		zap.L().Sugar().Error(err)
+	}
+
+	fmt.Println(buf)
 	fmt.Println(string(data))
+
 	jsonString := &missionv1.SendMissionRequest{}
 	json.Unmarshal(data, jsonString)
 	fmt.Print(jsonString)
@@ -48,10 +57,10 @@ func (s *MissionServer) SendMission(
 	id := req.Msg.GetId()
 	seq := req.Msg.SequenceItems
 
-	// err = DialComm(&buf, s.l)
-	// if err != nil {
-	// 	s.l.Sugar().Error(err)
-	// }
+	err = DialComm(&buf)
+	if err != nil {
+		zap.L().Sugar().Error(err)
+	}
 
 	return connect.NewResponse(&missionv1.SendMissionResponse{
 		Success: true,
@@ -59,13 +68,14 @@ func (s *MissionServer) SendMission(
 	}), nil
 }
 
+func init() {
+	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
+}
+
 func main() {
 	// ctx := context.Background()
 
-	log, _ := zap.NewProduction()
-	defer log.Sync()
-	sugar := log.Sugar()
-	sugar.Infof("Starting server on 3002")
+	zap.L().Info("Starting server on 3002")
 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -73,14 +83,13 @@ func main() {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		sugar.Errorf("Can't connect to postgres: %s", err)
+		zap.L().Sugar().Errorf("Can't connect DB")
 		return
 	}
 	defer db.Close()
 
 	queries := gendb.New(db)
 	missioner := &MissionServer{
-		l:  log,
 		db: queries,
 	}
 
@@ -97,21 +106,21 @@ func main() {
 
 	err = http.ListenAndServe(":3002", h2c.NewHandler(server, &http2.Server{}))
 	if err != nil {
-		sugar.Error(err)
+		zap.L().Sugar().Errorf("Can't start server")
 	}
 }
 
-func DialComm(buf *[]byte, l *zap.Logger) error {
+func DialComm(buf *[]byte) error {
 	commConn, err := net.Dial("tcp4", "localhost:3003")
 	if err != nil {
-		l.Sugar().Error(err)
+		zap.L().Sugar().Errorf("Error dialing to comm service")
 		return err
 	}
 	defer commConn.Close()
 
 	_, err = commConn.Write(*buf)
 	if err != nil {
-		l.Sugar().Error(err)
+		zap.L().Sugar().Error(err)
 		return err
 	}
 
@@ -124,13 +133,13 @@ func DialComm(buf *[]byte, l *zap.Logger) error {
 			if err == io.EOF {
 				break
 			}
-			l.Sugar().Error(err)
+			zap.L().Sugar().Error(err)
 			return err
 		}
 		resp = append(resp, buffer[:n]...)
 	}
 
-	l.Sugar().Info(string(resp))
+	zap.L().Sugar().Info(string(resp))
 
 	return nil
 }

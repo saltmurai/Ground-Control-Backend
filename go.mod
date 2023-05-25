@@ -12,9 +12,13 @@ require (
 	google.golang.org/protobuf v1.30.0
 )
 
-require github.com/stretchr/testify v1.8.1 // indirect
+require (
+	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/tabbed/pqtype v0.1.1 // indirect
+)
 
 require (
+	github.com/golang/protobuf v1.5.3
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/text v0.9.0 // indirect

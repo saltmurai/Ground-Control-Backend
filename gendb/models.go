@@ -6,10 +6,35 @@ package gendb
 
 import (
 	"database/sql"
+	"time"
+
+	"github.com/tabbed/pqtype"
 )
+
+type Drone struct {
+	ID   int64
+	Ip   string
+	Name string
+}
 
 type Mission struct {
 	ID        int64
-	Protobuf  sql.NullString
-	CreatedAt sql.NullTime
+	Name      string
+	DroneID   int64
+	PackageID int64
+	SeqID     int64
+}
+
+type Package struct {
+	ID     int64
+	Name   string
+	Weight float64
+}
+
+type Sequence struct {
+	ID          int64
+	Name        sql.NullString
+	Description sql.NullString
+	Seq         pqtype.NullRawMessage
+	CreatedAt   time.Time
 }

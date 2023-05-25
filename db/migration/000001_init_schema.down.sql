@@ -1,1 +1,2 @@
-DROP TABLE IF EXISTS missions;
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
