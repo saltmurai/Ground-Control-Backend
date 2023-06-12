@@ -7,6 +7,11 @@ package gendb
 
 import (
 	"context"
+	"database/sql"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/tabbed/pqtype"
 )
 
 const getMission = `-- name: GetMission :one
@@ -30,25 +35,38 @@ func (q *Queries) GetMission(ctx context.Context, id int64) (Mission, error) {
 const insertDrone = `-- name: InsertDrone :one
 INSERT INTO drones (
 		id,
-		ip,
-		name
+		name,
+		address,
+		status
 ) VALUES (
 		$1,
 		$2,
-		$3
-) RETURNING id, ip, name
+		$3,
+		$4
+) RETURNING id, name, address, status
 `
 
 type InsertDroneParams struct {
-	ID   int64
-	Ip   string
-	Name string
+	ID      uuid.UUID
+	Name    string
+	Address string
+	Status  bool
 }
 
 func (q *Queries) InsertDrone(ctx context.Context, arg InsertDroneParams) (Drone, error) {
-	row := q.db.QueryRowContext(ctx, insertDrone, arg.ID, arg.Ip, arg.Name)
+	row := q.db.QueryRowContext(ctx, insertDrone,
+		arg.ID,
+		arg.Name,
+		arg.Address,
+		arg.Status,
+	)
 	var i Drone
-	err := row.Scan(&i.ID, &i.Ip, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Status,
+	)
 	return i, err
 }
 
@@ -59,7 +77,7 @@ INSERT INTO packages (
 ) VALUES (
 		$1,
 		$2
-) RETURNING id, name, weight
+) RETURNING id, name, weight, height, length, sender_id, receiver_id
 `
 
 type InsertPackageParams struct {
@@ -70,8 +88,109 @@ type InsertPackageParams struct {
 func (q *Queries) InsertPackage(ctx context.Context, arg InsertPackageParams) (Package, error) {
 	row := q.db.QueryRowContext(ctx, insertPackage, arg.Name, arg.Weight)
 	var i Package
-	err := row.Scan(&i.ID, &i.Name, &i.Weight)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Weight,
+		&i.Height,
+		&i.Length,
+		&i.SenderID,
+		&i.ReceiverID,
+	)
 	return i, err
+}
+
+const insertSequence = `-- name: InsertSequence :one
+INSERT INTO sequences (
+		name,
+		description,
+		seq,
+		created_at
+) VALUES (
+		$1,
+		$2,
+		$3,
+		$4
+) RETURNING id, name, description, seq, created_at
+`
+
+type InsertSequenceParams struct {
+	Name        sql.NullString
+	Description sql.NullString
+	Seq         pqtype.NullRawMessage
+	CreatedAt   time.Time
+}
+
+func (q *Queries) InsertSequence(ctx context.Context, arg InsertSequenceParams) (Sequence, error) {
+	row := q.db.QueryRowContext(ctx, insertSequence,
+		arg.Name,
+		arg.Description,
+		arg.Seq,
+		arg.CreatedAt,
+	)
+	var i Sequence
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Seq,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertUser = `-- name: InsertUser :one
+INSERT INTO users (
+		id,
+		name
+) VALUES (
+		$1,
+		$2
+) RETURNING id, name
+`
+
+type InsertUserParams struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, insertUser, arg.ID, arg.Name)
+	var i User
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
+const listDrones = `-- name: ListDrones :many
+SELECT id, name, address, status FROM drones
+`
+
+func (q *Queries) ListDrones(ctx context.Context) ([]Drone, error) {
+	rows, err := q.db.QueryContext(ctx, listDrones)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Drone
+	for rows.Next() {
+		var i Drone
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMission = `-- name: ListMission :many
@@ -108,7 +227,7 @@ func (q *Queries) ListMission(ctx context.Context) ([]Mission, error) {
 }
 
 const listPackage = `-- name: ListPackage :many
-SELECT id, name, weight FROM packages
+SELECT id, name, weight, height, length, sender_id, receiver_id FROM packages
 `
 
 func (q *Queries) ListPackage(ctx context.Context) ([]Package, error) {
@@ -120,7 +239,42 @@ func (q *Queries) ListPackage(ctx context.Context) ([]Package, error) {
 	var items []Package
 	for rows.Next() {
 		var i Package
-		if err := rows.Scan(&i.ID, &i.Name, &i.Weight); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Weight,
+			&i.Height,
+			&i.Length,
+			&i.SenderID,
+			&i.ReceiverID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, name FROM users
+`
+
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

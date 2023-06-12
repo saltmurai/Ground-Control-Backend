@@ -12,9 +12,10 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/go-chi/chi/v5"
-	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
 	"github.com/rs/cors"
 	pbjs "google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	_ "github.com/lib/pq"
 	missionv1 "github.com/saltmurai/drone-api-service/gen/mission/v1"
@@ -94,10 +95,104 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	// CRUD
 	r := chi.NewRouter()
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("testing"))
 	})
+
+	r.Post("/drones", func(w http.ResponseWriter, r *http.Request) {
+		// parse body
+		drones := gendb.Drone{}
+		err := json.NewDecoder(r.Body).Decode(&drones)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		drones.ID = uuid.New()
+
+		// insert to db
+		_, err = queries.InsertDrone(r.Context(), gendb.InsertDroneParams{
+			ID:      drones.ID,
+			Name:    drones.Name,
+			Address: drones.Address,
+			Status:  false,
+		})
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	})
+	r.Get("/drones", func(w http.ResponseWriter, r *http.Request) {
+		// get all drones
+		drones, err := queries.ListDrones(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// convert to json
+		jsonString, err := json.Marshal(drones)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	r.Post("/users", func(w http.ResponseWriter, r *http.Request) {
+		// parse body
+		users := gendb.User{}
+		err := json.NewDecoder(r.Body).Decode(&users)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// generate uuid
+		users.ID = uuid.New()
+		// insert to db
+		_, err = queries.InsertUser(r.Context(), gendb.InsertUserParams{
+			ID:   users.ID,
+			Name: users.Name,
+		})
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	r.Get("/users", func(w http.ResponseWriter, r *http.Request) {
+		// get all users
+		users, err := queries.ListUsers(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// convert to json
+		jsonString, err := json.Marshal(users)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
 	path, handler := missionv1connect.NewMissionServiceHandler(missioner)
 	mux.Handle(path, handler)
 	mux.Handle("/", r)

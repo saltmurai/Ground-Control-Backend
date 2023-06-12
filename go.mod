@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/tabbed/pqtype v0.1.1 // indirect
 )

@@ -8,27 +8,33 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/tabbed/pqtype"
 )
 
 type Drone struct {
-	ID   int64
-	Ip   string
-	Name string
+	ID      uuid.UUID
+	Name    string
+	Address string
+	Status  bool
 }
 
 type Mission struct {
 	ID        int64
 	Name      string
-	DroneID   int64
-	PackageID int64
+	DroneID   uuid.UUID
+	PackageID uuid.UUID
 	SeqID     int64
 }
 
 type Package struct {
-	ID     int64
-	Name   string
-	Weight float64
+	ID         uuid.UUID
+	Name       string
+	Weight     float64
+	Height     float64
+	Length     float64
+	SenderID   uuid.UUID
+	ReceiverID uuid.UUID
 }
 
 type Sequence struct {
@@ -37,4 +43,9 @@ type Sequence struct {
 	Description sql.NullString
 	Seq         pqtype.NullRawMessage
 	CreatedAt   time.Time
+}
+
+type User struct {
+	ID   uuid.UUID
+	Name string
 }

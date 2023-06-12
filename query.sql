@@ -20,15 +20,17 @@ SELECT * FROM packages;
 -- name: InsertDrone :one
 INSERT INTO drones (
 		id,
-		ip,
-		name
+		name,
+		address,
+		status
 ) VALUES (
 		$1,
 		$2,
-		$3
+		$3,
+		$4
 ) RETURNING *;
 
--- name: ListDrone: one
+-- name: ListDrones :many
 SELECT * FROM drones;
 
 -- name: InsertSequence :one
@@ -43,3 +45,16 @@ INSERT INTO sequences (
 		$3,
 		$4
 ) RETURNING *;
+
+-- name: InsertUser :one
+INSERT INTO users (
+		id,
+		name
+) VALUES (
+		$1,
+		$2
+) RETURNING *;
+
+-- name: ListUsers :many
+SELECT * FROM users;
+
