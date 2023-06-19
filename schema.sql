@@ -1,5 +1,5 @@
 CREATE TABLE "packages"(
-    "id" UUID NOT NULL,
+    "id" bigserial NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "weight" DOUBLE PRECISION NOT NULL,
     "height" DOUBLE PRECISION NOT NULL,
@@ -25,18 +25,20 @@ CREATE TABLE "users"(
 ALTER TABLE
     "users" ADD PRIMARY KEY("id");
 CREATE TABLE "missions"(
-    "id" BIGINT NOT NULL,
+    "id" bigserial NOT NULL,
     "name" VARCHAR(255) NOT NULL,
-    "drone_id" UUID NOT NULL,
-    "package_id" UUID NOT NULL,
-    "seq_id" BIGINT NOT NULL
+    "drone_id" BIGINT NOT NULL,
+    "package_id" BIGINT NOT NULL,
+    "seq_id" BIGINT NOT NULL,
+    "image_folder" VARCHAR(255) NULL
 );
 ALTER TABLE
     "missions" ADD PRIMARY KEY("id");
 CREATE TABLE "drones"(
-    "id" UUID NOT NULL,
+    "id" bigserial NOT NULL,
     "name" TEXT NOT NULL,
     "address" VARCHAR(255) NOT NULL,
+    "ip" VARCHAR(255) NOT NULL,
     "status" BOOLEAN NOT NULL
 );
 ALTER TABLE
