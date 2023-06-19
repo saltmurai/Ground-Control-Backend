@@ -91,11 +91,6 @@ message SequenceItem {
 
 message SendMissionRequest {
   // Define a unique ID for the mission.
-  string id = 1;
-	int32 length = 2;
-	int32 package_id = 3;
-	int32 drone_id = 4;
-	string description = 5;
 	repeated SequenceItem sequence_items = 6;
 
 }
