@@ -5,6 +5,21 @@ WHERE id = $1 LIMIT 1;
 -- name: ListMission :many
 SELECT * FROM missions;
 
+-- name: InsertMission :one
+INSERT INTO missions (
+		name,
+		drone_id,
+		package_id,
+		seq_id,
+		image_folder
+) VALUES (
+		$1,
+		$2,
+		$3,
+		$4,
+		$5
+) RETURNING *;
+
 -- name: InsertPackage :one
 INSERT INTO packages (
 		name,
