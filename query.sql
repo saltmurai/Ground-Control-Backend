@@ -2,8 +2,21 @@
 SELECT * FROM missions
 WHERE id = $1 LIMIT 1;
 
--- name: ListMission :many
-SELECT * FROM missions;
+-- name: ListMissions :many
+SELECT 
+	m.id,
+	m.name,
+	m.package_id,
+	p.name AS package_name,
+	m.drone_id,
+	d.name AS drone_name,
+	m.seq_id,
+	s.name AS seq_name
+FROM 
+missions m
+JOIN drones d ON m.drone_id = d.id
+JOIN packages p ON m.package_id = p.id
+JOIN sequences s ON m.seq_id = s.id;
 
 -- name: InsertMission :one
 INSERT INTO missions (
@@ -11,13 +24,15 @@ INSERT INTO missions (
 		drone_id,
 		package_id,
 		seq_id,
-		image_folder
+		image_folder,
+		status
 ) VALUES (
 		$1,
 		$2,
 		$3,
 		$4,
-		$5
+		$5,
+		$6
 ) RETURNING *;
 
 -- name: InsertPackage :one
@@ -91,7 +106,7 @@ INSERT INTO sequences (
 		$4
 ) RETURNING *;
 
---name: ListSequences :many
+-- name: ListSequences :many
 SELECT * FROM sequences;
 
 -- name: DeleteDrone :many

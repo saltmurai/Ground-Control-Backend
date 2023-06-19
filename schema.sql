@@ -11,9 +11,9 @@ ALTER TABLE
     "packages" ADD PRIMARY KEY("id");
 CREATE TABLE "sequences"(
     "id" bigserial NOT NULL,
-    "name" VARCHAR(255) NULL,
-    "description" TEXT NULL,
-    "seq" jsonb NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT NOT NULL,
+    "seq" jsonb NOT NULL,
     "created_at" DATE NOT NULL
 );
 ALTER TABLE
@@ -30,13 +30,14 @@ CREATE TABLE "missions"(
     "drone_id" BIGINT NOT NULL,
     "package_id" BIGINT NOT NULL,
     "seq_id" BIGINT NOT NULL,
-    "image_folder" VARCHAR(255) NULL
+    "image_folder" VARCHAR(255) NOT NULL,
+    "status" BOOLEAN NOT NULL
 );
 ALTER TABLE
     "missions" ADD PRIMARY KEY("id");
 CREATE TABLE "drones"(
     "id" bigserial NOT NULL,
-    "name" TEXT NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     "address" VARCHAR(255) NOT NULL,
     "ip" VARCHAR(255) NOT NULL,
     "status" BOOLEAN NOT NULL

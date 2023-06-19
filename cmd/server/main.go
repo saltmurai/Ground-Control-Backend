@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	missionv1 "github.com/saltmurai/drone-api-service/gen/mission/v1"
 	"github.com/saltmurai/drone-api-service/gen/mission/v1/missionv1connect"
 	"github.com/saltmurai/drone-api-service/gendb"
@@ -55,7 +56,6 @@ func (s *MissionServer) SendMission(
 	json.Unmarshal(data, jsonString)
 	fmt.Print(jsonString)
 
-	id := req.Msg.GetId()
 	seq := req.Msg.SequenceItems
 
 	err = DialComm(&buf)
@@ -65,7 +65,7 @@ func (s *MissionServer) SendMission(
 
 	return connect.NewResponse(&missionv1.SendMissionResponse{
 		Success: true,
-		Message: fmt.Sprintf("Send mission id %s with %d sequences", id, len(seq)),
+		Message: fmt.Sprintf("Send mission id %d sequences", len(seq)),
 	}), nil
 }
 
@@ -73,8 +73,19 @@ func init() {
 	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
 }
 
+type DroneWithTelemetries struct {
+	gendb.Drone
+	Position string `json:"Position"`
+	Battery  string `json:"battery"`
+}
+
 func main() {
-	// ctx := context.Background()
+	ctx := context.Background()
+	opt, err := redis.ParseURL("redis://redis:6379")
+	if err != nil {
+		panic(err)
+	}
+	redisClient := redis.NewClient(opt)
 
 	zap.L().Info("Starting server on 3002")
 
@@ -111,13 +122,11 @@ func main() {
 			return
 		}
 
-		drones.ID = uuid.New()
-
 		// insert to db
 		_, err = queries.InsertDrone(r.Context(), gendb.InsertDroneParams{
-			ID:      drones.ID,
 			Name:    drones.Name,
 			Address: drones.Address,
+			Ip:      drones.Ip,
 			Status:  false,
 		})
 		if err != nil {
@@ -128,6 +137,27 @@ func main() {
 
 		w.WriteHeader(http.StatusCreated)
 	})
+
+	r.Delete("/drones", func(w http.ResponseWriter, r *http.Request) {
+		// get Id from body
+		drones := gendb.Drone{}
+		err := json.NewDecoder(r.Body).Decode(&drones)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// delete from db
+		_, err = queries.DeleteDrone(r.Context(), drones.ID)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
 	r.Get("/drones", func(w http.ResponseWriter, r *http.Request) {
 		// get all drones
 		drones, err := queries.ListDrones(r.Context())
@@ -139,6 +169,161 @@ func main() {
 
 		// convert to json
 		jsonString, err := json.Marshal(drones)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	r.Get("/activeDrones", func(w http.ResponseWriter, r *http.Request) {
+		activeDrones, err := queries.ListActiveDrones(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		activeDronesWithTelemetries := make([]DroneWithTelemetries, 0)
+		for _, drone := range activeDrones {
+			positionKey := fmt.Sprintf("%d-%s", drone.ID, "postion")
+			batteryKey := fmt.Sprintf("%d-%s", drone.ID, "battery")
+
+			position, err := redisClient.Get(ctx, positionKey).Result()
+			if err != nil {
+				zap.L().Sugar().Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			battery, err := redisClient.Get(ctx, batteryKey).Result()
+			if err != nil {
+				zap.L().Sugar().Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			activeDronesWithTelemetries = append(activeDronesWithTelemetries, DroneWithTelemetries{
+				Drone:    drone,
+				Position: position,
+				Battery:  battery,
+			})
+		}
+
+		jsonString, err := json.Marshal(activeDronesWithTelemetries)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	r.Post("/resetDrones", func(w http.ResponseWriter, r *http.Request) {
+		res, err := queries.ResetAllDroneStatus(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		jsonString, err := json.Marshal(res)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	// ** Sequences **
+	r.Post("/sequences", func(w http.ResponseWriter, r *http.Request) {
+		// parse body
+		sequences := gendb.Sequence{}
+		err := json.NewDecoder(r.Body).Decode(&sequences)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// insert to db
+		_, err = queries.InsertSequence(r.Context(), gendb.InsertSequenceParams{
+			Name:        sequences.Name,
+			Description: sequences.Description,
+			Seq:         sequences.Seq,
+		})
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	r.Get("/sequences", func(w http.ResponseWriter, r *http.Request) {
+		// get all sequences
+		sequences, err := queries.ListSequences(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// convert to json
+		jsonString, err := json.Marshal(sequences)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	// ** Mission **
+	r.Post("/missions", func(w http.ResponseWriter, r *http.Request) {
+		// parse body
+		missions := gendb.Mission{}
+		err := json.NewDecoder(r.Body).Decode(&missions)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// insert to db
+		_, err = queries.InsertMission(r.Context(), gendb.InsertMissionParams{
+			Name:        missions.Name,
+			SeqID:       missions.SeqID,
+			DroneID:     missions.DroneID,
+			PackageID:   missions.PackageID,
+			ImageFolder: fmt.Sprintf("%s-%d", missions.Name, missions.DroneID),
+			Status:      false,
+		})
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	r.Get("/missions", func(w http.ResponseWriter, r *http.Request) {
+		// get all missions
+		missions, err := queries.ListMissions(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// convert to json
+		jsonString, err := json.Marshal(missions)
 		if err != nil {
 			zap.L().Sugar().Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -192,6 +377,55 @@ func main() {
 
 		w.Write(jsonString)
 	})
+
+	r.Post("/packages", func(w http.ResponseWriter, r *http.Request) {
+		// parse body
+		packages := gendb.Package{}
+		err := json.NewDecoder(r.Body).Decode(&packages)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// add to db
+		_, err = queries.InsertPackage(r.Context(), gendb.InsertPackageParams{
+			Name:       packages.Name,
+			Weight:     packages.Weight,
+			Height:     packages.Height,
+			Length:     packages.Length,
+			SenderID:   packages.SenderID,
+			ReceiverID: packages.ReceiverID,
+		})
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	r.Get("/packages", func(w http.ResponseWriter, r *http.Request) {
+		// get all packages
+		packages, err := queries.ListPackages(r.Context())
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// convert to json
+		jsonString, err := json.Marshal(packages)
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(jsonString)
+	})
+
+	// receive a image from drone then save to db
 
 	path, handler := missionv1connect.NewMissionServiceHandler(missioner)
 	mux.Handle(path, handler)

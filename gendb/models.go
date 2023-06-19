@@ -5,30 +5,32 @@
 package gendb
 
 import (
-	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tabbed/pqtype"
 )
 
 type Drone struct {
-	ID      uuid.UUID
+	ID      int64
 	Name    string
 	Address string
+	Ip      string
 	Status  bool
 }
 
 type Mission struct {
-	ID        int64
-	Name      string
-	DroneID   uuid.UUID
-	PackageID uuid.UUID
-	SeqID     int64
+	ID          int64
+	Name        string
+	DroneID     int64
+	PackageID   int64
+	SeqID       int64
+	ImageFolder string
+	Status      bool
 }
 
 type Package struct {
-	ID         uuid.UUID
+	ID         int64
 	Name       string
 	Weight     float64
 	Height     float64
@@ -39,9 +41,9 @@ type Package struct {
 
 type Sequence struct {
 	ID          int64
-	Name        sql.NullString
-	Description sql.NullString
-	Seq         pqtype.NullRawMessage
+	Name        string
+	Description string
+	Seq         json.RawMessage
 	CreatedAt   time.Time
 }
 
