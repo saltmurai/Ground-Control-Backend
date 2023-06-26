@@ -49,10 +49,12 @@ message vector3 {
 message InitInstruction {
   // Define a repeated field of integers for the peripheral devices.
   repeated int32 peripheral = 1;
+	// Home
+	repeated double home = 2;
   // Define a string field for the controller.
-  Controller controller = 2;
+  Controller controller = 3;
   // Define a string field for the standard.
-  Termination terminate = 3;
+  Termination terminate = 4;
 }
 
 // Define the message for the TRAVEL instruction.
@@ -91,7 +93,8 @@ message SequenceItem {
 
 message SendMissionRequest {
   // Define a unique ID for the mission.
-	repeated SequenceItem sequence_items = 6;
+	// Define a repeated field of SequenceItem for the mission.
+	repeated SequenceItem sequence_items = 2;
 
 }
 

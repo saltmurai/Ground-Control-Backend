@@ -8,7 +8,6 @@ package gendb
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -42,13 +41,14 @@ func (q *Queries) DeleteDrone(ctx context.Context, id int64) ([]string, error) {
 	return items, nil
 }
 
-const getMission = `-- name: GetMission :one
-SELECT id, name, drone_id, package_id, seq_id, image_folder, status FROM missions
-WHERE id = $1 LIMIT 1
+const deleteMission = `-- name: DeleteMission :one
+DELETE FROM missions
+WHERE id = $1
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
 `
 
-func (q *Queries) GetMission(ctx context.Context, id int64) (Mission, error) {
-	row := q.db.QueryRowContext(ctx, getMission, id)
+func (q *Queries) DeleteMission(ctx context.Context, id int64) (Mission, error) {
+	row := q.db.QueryRowContext(ctx, deleteMission, id)
 	var i Mission
 	err := row.Scan(
 		&i.ID,
@@ -58,6 +58,72 @@ func (q *Queries) GetMission(ctx context.Context, id int64) (Mission, error) {
 		&i.SeqID,
 		&i.ImageFolder,
 		&i.Status,
+	)
+	return i, err
+}
+
+const getDroneByID = `-- name: GetDroneByID :one
+SELECT id, name, address, ip, status FROM drones
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetDroneByID(ctx context.Context, id int64) (Drone, error) {
+	row := q.db.QueryRowContext(ctx, getDroneByID, id)
+	var i Drone
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Ip,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getMission = `-- name: GetMission :one
+SELECT m.id, m.name, m.drone_id, m.image_folder, d.ip as drone_ip, s.id as seq_id FROM missions m
+JOIN drones d ON m.drone_id = d.id
+JOIN sequences s ON m.seq_id = s.id
+WHERE m.id = $1 LIMIT 1
+`
+
+type GetMissionRow struct {
+	ID          int64
+	Name        string
+	DroneID     int64
+	ImageFolder string
+	DroneIp     string
+	SeqID       int64
+}
+
+func (q *Queries) GetMission(ctx context.Context, id int64) (GetMissionRow, error) {
+	row := q.db.QueryRowContext(ctx, getMission, id)
+	var i GetMissionRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DroneID,
+		&i.ImageFolder,
+		&i.DroneIp,
+		&i.SeqID,
+	)
+	return i, err
+}
+
+const getSequenceByID = `-- name: GetSequenceByID :one
+SELECT id, name, description, seq, length FROM sequences
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetSequenceByID(ctx context.Context, id int64) (Sequence, error) {
+	row := q.db.QueryRowContext(ctx, getSequenceByID, id)
+	var i Sequence
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Seq,
+		&i.Length,
 	)
 	return i, err
 }
@@ -125,7 +191,7 @@ type InsertMissionParams struct {
 	PackageID   int64
 	SeqID       int64
 	ImageFolder string
-	Status      bool
+	Status      string
 }
 
 func (q *Queries) InsertMission(ctx context.Context, arg InsertMissionParams) (Mission, error) {
@@ -204,20 +270,20 @@ INSERT INTO sequences (
 		name,
 		description,
 		seq,
-		created_at
+		length
 ) VALUES (
 		$1,
 		$2,
 		$3,
 		$4
-) RETURNING id, name, description, seq, created_at
+) RETURNING id, name, description, seq, length
 `
 
 type InsertSequenceParams struct {
 	Name        string
 	Description string
 	Seq         json.RawMessage
-	CreatedAt   time.Time
+	Length      int64
 }
 
 func (q *Queries) InsertSequence(ctx context.Context, arg InsertSequenceParams) (Sequence, error) {
@@ -225,7 +291,7 @@ func (q *Queries) InsertSequence(ctx context.Context, arg InsertSequenceParams) 
 		arg.Name,
 		arg.Description,
 		arg.Seq,
-		arg.CreatedAt,
+		arg.Length,
 	)
 	var i Sequence
 	err := row.Scan(
@@ -233,7 +299,7 @@ func (q *Queries) InsertSequence(ctx context.Context, arg InsertSequenceParams) 
 		&i.Name,
 		&i.Description,
 		&i.Seq,
-		&i.CreatedAt,
+		&i.Length,
 	)
 	return i, err
 }
@@ -332,6 +398,7 @@ SELECT
 	m.id,
 	m.name,
 	m.package_id,
+	m.status,
 	p.name AS package_name,
 	m.drone_id,
 	d.name AS drone_name,
@@ -348,6 +415,7 @@ type ListMissionsRow struct {
 	ID          int64
 	Name        string
 	PackageID   int64
+	Status      string
 	PackageName string
 	DroneID     int64
 	DroneName   string
@@ -368,6 +436,7 @@ func (q *Queries) ListMissions(ctx context.Context) ([]ListMissionsRow, error) {
 			&i.ID,
 			&i.Name,
 			&i.PackageID,
+			&i.Status,
 			&i.PackageName,
 			&i.DroneID,
 			&i.DroneName,
@@ -446,7 +515,7 @@ func (q *Queries) ListPackages(ctx context.Context) ([]ListPackagesRow, error) {
 }
 
 const listSequences = `-- name: ListSequences :many
-SELECT id, name, description, seq, created_at FROM sequences
+SELECT id, name, description, seq, length FROM sequences
 `
 
 func (q *Queries) ListSequences(ctx context.Context) ([]Sequence, error) {
@@ -463,7 +532,7 @@ func (q *Queries) ListSequences(ctx context.Context) ([]Sequence, error) {
 			&i.Name,
 			&i.Description,
 			&i.Seq,
-			&i.CreatedAt,
+			&i.Length,
 		); err != nil {
 			return nil, err
 		}
@@ -538,4 +607,58 @@ func (q *Queries) ResetAllDroneStatus(ctx context.Context) ([]Drone, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateMissionImageFolder = `-- name: UpdateMissionImageFolder :one
+UPDATE missions
+SET image_folder = $1
+WHERE id = $2
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+`
+
+type UpdateMissionImageFolderParams struct {
+	ImageFolder string
+	ID          int64
+}
+
+func (q *Queries) UpdateMissionImageFolder(ctx context.Context, arg UpdateMissionImageFolderParams) (Mission, error) {
+	row := q.db.QueryRowContext(ctx, updateMissionImageFolder, arg.ImageFolder, arg.ID)
+	var i Mission
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DroneID,
+		&i.PackageID,
+		&i.SeqID,
+		&i.ImageFolder,
+		&i.Status,
+	)
+	return i, err
+}
+
+const updateMissionStatus = `-- name: UpdateMissionStatus :one
+UPDATE missions
+SET status = $1
+WHERE id = $2
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+`
+
+type UpdateMissionStatusParams struct {
+	Status string
+	ID     int64
+}
+
+func (q *Queries) UpdateMissionStatus(ctx context.Context, arg UpdateMissionStatusParams) (Mission, error) {
+	row := q.db.QueryRowContext(ctx, updateMissionStatus, arg.Status, arg.ID)
+	var i Mission
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DroneID,
+		&i.PackageID,
+		&i.SeqID,
+		&i.ImageFolder,
+		&i.Status,
+	)
+	return i, err
 }

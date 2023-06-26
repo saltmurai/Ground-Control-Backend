@@ -6,7 +6,6 @@ package gendb
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -26,7 +25,7 @@ type Mission struct {
 	PackageID   int64
 	SeqID       int64
 	ImageFolder string
-	Status      bool
+	Status      string
 }
 
 type Package struct {
@@ -44,7 +43,7 @@ type Sequence struct {
 	Name        string
 	Description string
 	Seq         json.RawMessage
-	CreatedAt   time.Time
+	Length      int64
 }
 
 type User struct {

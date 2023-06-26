@@ -14,7 +14,7 @@ CREATE TABLE "sequences"(
     "name" VARCHAR(255) NOT NULL,
     "description" TEXT NOT NULL,
     "seq" jsonb NOT NULL,
-    "created_at" DATE NOT NULL
+    "length" BIGINT NOT NULL
 );
 ALTER TABLE
     "sequences" ADD PRIMARY KEY("id");
@@ -31,7 +31,7 @@ CREATE TABLE "missions"(
     "package_id" BIGINT NOT NULL,
     "seq_id" BIGINT NOT NULL,
     "image_folder" VARCHAR(255) NOT NULL,
-    "status" BOOLEAN NOT NULL
+    "status" VARCHAR(255) NOT NULL
 );
 ALTER TABLE
     "missions" ADD PRIMARY KEY("id");

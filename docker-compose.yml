@@ -11,10 +11,12 @@ services:
     volumes:
       - ./:/app
     command: air
+    restart: on-failure
+    network_mode: host
     depends_on:
       - db
       - redis
-      - rabbitmq
+      # - rabbitmq
   db:
     image: postgres:alpine
     environment:
@@ -29,13 +31,18 @@ services:
     image: redis:alpine
     ports:
       - "6379:6379"
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    ports:
-      - "15672:15672"
-      - "5672:5672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
+  # rabbitmq:
+  #   image: rabbitmq:3-management-alpine
+  #   ports:
+  #     - "15672:15672"
+  #     - "5672:5672"
+  #   volumes:
+  #     - rabbitmq-data:/var/lib/rabbitmq
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "5672"]
+  #     interval: 5s
+  #     timeout: 15s
+  #     retries: 3
 volumes:
   postgres-db:
   rabbitmq-data:

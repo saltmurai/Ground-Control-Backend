@@ -1,12 +1,15 @@
 -- name: GetMission :one
-SELECT * FROM missions
-WHERE id = $1 LIMIT 1;
+SELECT m.id, m.name, m.drone_id, m.image_folder, d.ip as drone_ip, s.id as seq_id FROM missions m
+JOIN drones d ON m.drone_id = d.id
+JOIN sequences s ON m.seq_id = s.id
+WHERE m.id = $1 LIMIT 1;
 
 -- name: ListMissions :many
 SELECT 
 	m.id,
 	m.name,
 	m.package_id,
+	m.status,
 	p.name AS package_name,
 	m.drone_id,
 	d.name AS drone_name,
@@ -35,6 +38,22 @@ INSERT INTO missions (
 		$6
 ) RETURNING *;
 
+-- name: DeleteMission :one
+DELETE FROM missions
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateMissionStatus :one
+UPDATE missions
+SET status = $1
+WHERE id = $2
+RETURNING *;
+
+-- name: UpdateMissionImageFolder :one
+UPDATE missions
+SET image_folder = $1
+WHERE id = $2
+RETURNING *;
 -- name: InsertPackage :one
 INSERT INTO packages (
 		name,
@@ -88,6 +107,10 @@ SELECT * FROM drones;
 SELECT * FROM drones
 WHERE status = true;
 
+-- name: GetDroneByID :one
+SELECT * FROM drones
+WHERE id = $1 LIMIT 1;
+
 -- name: ResetAllDroneStatus :many
 UPDATE drones
 SET status = false
@@ -98,7 +121,7 @@ INSERT INTO sequences (
 		name,
 		description,
 		seq,
-		created_at
+		length
 ) VALUES (
 		$1,
 		$2,
@@ -108,6 +131,10 @@ INSERT INTO sequences (
 
 -- name: ListSequences :many
 SELECT * FROM sequences;
+
+-- name: GetSequenceByID :one
+SELECT * FROM sequences
+WHERE id = $1 LIMIT 1;
 
 -- name: DeleteDrone :many
 DELETE FROM drones
