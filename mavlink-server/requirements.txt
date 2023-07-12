@@ -1,5 +1,0 @@
-aioredis==2.0.1
-asyncpg==0.27.0
-mavsdk
-Requests==2.31.0
-websockets==11.0.3

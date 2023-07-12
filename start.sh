@@ -1,6 +1,8 @@
 #!/bin/bash
 
-cd /home/Dev/gcs-be
+cd ./mavlink
+python3 main.py & 
 
-# Run docker-compose up
+cd ../
 docker compose up
+
