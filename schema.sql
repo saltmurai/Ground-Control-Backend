@@ -31,7 +31,8 @@ CREATE TABLE "missions"(
     "package_id" BIGINT NOT NULL,
     "seq_id" BIGINT NOT NULL,
     "image_folder" VARCHAR(255) NOT NULL,
-    "status" VARCHAR(255) NOT NULL
+    "status" VARCHAR(255) NOT NULL,
+    "path" jsonb NOT NULL
 );
 ALTER TABLE
     "missions" ADD PRIMARY KEY("id");
@@ -40,7 +41,8 @@ CREATE TABLE "drones"(
     "name" VARCHAR(255) NOT NULL,
     "address" VARCHAR(255) NOT NULL,
     "ip" VARCHAR(255) NOT NULL,
-    "status" BOOLEAN NOT NULL
+    "status" BOOLEAN NOT NULL,
+    "port" BIGINT NOT NULL
 );
 ALTER TABLE
     "drones" ADD PRIMARY KEY("id");

@@ -44,7 +44,7 @@ func (q *Queries) DeleteDrone(ctx context.Context, id int64) ([]string, error) {
 const deleteMission = `-- name: DeleteMission :one
 DELETE FROM missions
 WHERE id = $1
-RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status, path
 `
 
 func (q *Queries) DeleteMission(ctx context.Context, id int64) (Mission, error) {
@@ -58,12 +58,13 @@ func (q *Queries) DeleteMission(ctx context.Context, id int64) (Mission, error) 
 		&i.SeqID,
 		&i.ImageFolder,
 		&i.Status,
+		&i.Path,
 	)
 	return i, err
 }
 
 const getDroneByID = `-- name: GetDroneByID :one
-SELECT id, name, address, ip, status FROM drones
+SELECT id, name, address, ip, status, port FROM drones
 WHERE id = $1 LIMIT 1
 `
 
@@ -76,6 +77,7 @@ func (q *Queries) GetDroneByID(ctx context.Context, id int64) (Drone, error) {
 		&i.Address,
 		&i.Ip,
 		&i.Status,
+		&i.Port,
 	)
 	return i, err
 }
@@ -133,13 +135,15 @@ INSERT INTO drones (
 		name,
 		address,
 		ip,
-		status
+		status,
+		port
 ) VALUES (
 		$1,
 		$2,
 		$3,
-		$4
-) RETURNING id, name, address, ip, status
+		$4,
+		$5
+) RETURNING id, name, address, ip, status, port
 `
 
 type InsertDroneParams struct {
@@ -147,6 +151,7 @@ type InsertDroneParams struct {
 	Address string
 	Ip      string
 	Status  bool
+	Port    int64
 }
 
 func (q *Queries) InsertDrone(ctx context.Context, arg InsertDroneParams) (Drone, error) {
@@ -155,6 +160,7 @@ func (q *Queries) InsertDrone(ctx context.Context, arg InsertDroneParams) (Drone
 		arg.Address,
 		arg.Ip,
 		arg.Status,
+		arg.Port,
 	)
 	var i Drone
 	err := row.Scan(
@@ -163,6 +169,7 @@ func (q *Queries) InsertDrone(ctx context.Context, arg InsertDroneParams) (Drone
 		&i.Address,
 		&i.Ip,
 		&i.Status,
+		&i.Port,
 	)
 	return i, err
 }
@@ -182,7 +189,7 @@ INSERT INTO missions (
 		$4,
 		$5,
 		$6
-) RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+) RETURNING id, name, drone_id, package_id, seq_id, image_folder, status, path
 `
 
 type InsertMissionParams struct {
@@ -212,6 +219,7 @@ func (q *Queries) InsertMission(ctx context.Context, arg InsertMissionParams) (M
 		&i.SeqID,
 		&i.ImageFolder,
 		&i.Status,
+		&i.Path,
 	)
 	return i, err
 }
@@ -327,7 +335,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (User, e
 }
 
 const listActiveDrones = `-- name: ListActiveDrones :many
-SELECT id, name, address, ip, status FROM drones
+SELECT id, name, address, ip, status, port FROM drones
 WHERE status = true
 `
 
@@ -346,6 +354,7 @@ func (q *Queries) ListActiveDrones(ctx context.Context) ([]Drone, error) {
 			&i.Address,
 			&i.Ip,
 			&i.Status,
+			&i.Port,
 		); err != nil {
 			return nil, err
 		}
@@ -361,7 +370,7 @@ func (q *Queries) ListActiveDrones(ctx context.Context) ([]Drone, error) {
 }
 
 const listDrones = `-- name: ListDrones :many
-SELECT id, name, address, ip, status FROM drones
+SELECT id, name, address, ip, status, port FROM drones
 `
 
 func (q *Queries) ListDrones(ctx context.Context) ([]Drone, error) {
@@ -379,6 +388,7 @@ func (q *Queries) ListDrones(ctx context.Context) ([]Drone, error) {
 			&i.Address,
 			&i.Ip,
 			&i.Status,
+			&i.Port,
 		); err != nil {
 			return nil, err
 		}
@@ -577,7 +587,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 const resetAllDroneStatus = `-- name: ResetAllDroneStatus :many
 UPDATE drones
 SET status = false
-RETURNING id, name, address, ip, status
+RETURNING id, name, address, ip, status, port
 `
 
 func (q *Queries) ResetAllDroneStatus(ctx context.Context) ([]Drone, error) {
@@ -595,6 +605,7 @@ func (q *Queries) ResetAllDroneStatus(ctx context.Context) ([]Drone, error) {
 			&i.Address,
 			&i.Ip,
 			&i.Status,
+			&i.Port,
 		); err != nil {
 			return nil, err
 		}
@@ -613,7 +624,7 @@ const updateMissionImageFolder = `-- name: UpdateMissionImageFolder :one
 UPDATE missions
 SET image_folder = $1
 WHERE id = $2
-RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status, path
 `
 
 type UpdateMissionImageFolderParams struct {
@@ -632,6 +643,7 @@ func (q *Queries) UpdateMissionImageFolder(ctx context.Context, arg UpdateMissio
 		&i.SeqID,
 		&i.ImageFolder,
 		&i.Status,
+		&i.Path,
 	)
 	return i, err
 }
@@ -640,7 +652,7 @@ const updateMissionStatus = `-- name: UpdateMissionStatus :one
 UPDATE missions
 SET status = $1
 WHERE id = $2
-RETURNING id, name, drone_id, package_id, seq_id, image_folder, status
+RETURNING id, name, drone_id, package_id, seq_id, image_folder, status, path
 `
 
 type UpdateMissionStatusParams struct {
@@ -659,6 +671,7 @@ func (q *Queries) UpdateMissionStatus(ctx context.Context, arg UpdateMissionStat
 		&i.SeqID,
 		&i.ImageFolder,
 		&i.Status,
+		&i.Path,
 	)
 	return i, err
 }

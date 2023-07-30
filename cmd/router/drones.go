@@ -13,8 +13,9 @@ import (
 
 type DroneWithTelemetries struct {
 	gendb.Drone
-	Position string `json:"Position"`
-	Battery  string `json:"battery"`
+	Position   string `json:"Position"`
+	Battery    string `json:"Battery"`
+	FlightMode string `json:"FlightMode"`
 }
 
 func AddDrone(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +35,7 @@ func AddDrone(w http.ResponseWriter, r *http.Request) {
 		Address: drones.Address,
 		Ip:      drones.Ip,
 		Status:  false,
+		Port:    0,
 	})
 	if err != nil {
 		zap.L().Sugar().Error(err)
@@ -100,7 +102,18 @@ func Telemetry(w http.ResponseWriter, r *http.Request) {
 	for _, drone := range activeDrones {
 		positionKey := fmt.Sprintf("%d-%s", drone.ID, "postion")
 		batteryKey := fmt.Sprintf("%d-%s", drone.ID, "battery")
+		flightModeKey := fmt.Sprintf("%d-%s", drone.ID, "flight_mode")
 
+		// check if exists in redis
+		exists, err := redisClient.Exists(ctx, positionKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if exists == 0 {
+			continue
+		}
 		position, err := redisClient.Get(ctx, positionKey).Result()
 		if err != nil {
 			zap.L().Sugar().Error(err)
@@ -108,16 +121,42 @@ func Telemetry(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		exists, err = redisClient.Exists(ctx, batteryKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if exists == 0 {
+			continue
+		}
 		battery, err := redisClient.Get(ctx, batteryKey).Result()
 		if err != nil {
 			zap.L().Sugar().Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		exists, err = redisClient.Exists(ctx, flightModeKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if exists == 0 {
+			continue
+		}
+		flightMode, err := redisClient.Get(ctx, flightModeKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		activeDronesWithTelemetries = append(activeDronesWithTelemetries, DroneWithTelemetries{
-			Drone:    drone,
-			Position: position,
-			Battery:  battery,
+			Drone:      drone,
+			Position:   position,
+			Battery:    battery,
+			FlightMode: flightMode,
 		})
 	}
 

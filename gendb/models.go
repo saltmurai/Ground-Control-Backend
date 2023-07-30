@@ -16,6 +16,7 @@ type Drone struct {
 	Address string
 	Ip      string
 	Status  bool
+	Port    int64
 }
 
 type Mission struct {
@@ -26,6 +27,7 @@ type Mission struct {
 	SeqID       int64
 	ImageFolder string
 	Status      string
+	Path        json.RawMessage
 }
 
 type Package struct {

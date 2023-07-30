@@ -92,12 +92,14 @@ INSERT INTO drones (
 		name,
 		address,
 		ip,
-		status
+		status,
+		port
 ) VALUES (
 		$1,
 		$2,
 		$3,
-		$4
+		$4,
+		$5
 ) RETURNING *;
 
 -- name: ListDrones :many

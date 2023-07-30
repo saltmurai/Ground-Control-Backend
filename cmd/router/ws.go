@@ -1,10 +1,12 @@
 package router
 
 import (
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/websocket"
-	"github.com/saltmurai/drone-api-service/cmd/database"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +17,6 @@ var upgrader = websocket.Upgrader{
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	zap.L().Sugar().Info("WebSocket connection opened")
 	// Upgrade HTTP request to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -24,7 +25,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Connect to RabbitMQ
-	channel := database.GetChannel()
+	connRabbitMQ, err := amqp.Dial(os.Getenv("AMQP_URL"))
+	if err != nil {
+		zap.L().Sugar().Error(err)
+		return
+	}
+	defer connRabbitMQ.Close()
+
+	// Create a channel and declare a queue
+	channel, err := connRabbitMQ.Channel()
+	if err != nil {
+		zap.L().Sugar().Error(err)
+		return
+	}
+	defer channel.Close()
+
 	queue, err := channel.QueueDeclare(
 		"log", // Queue name
 		false, // Durable
@@ -49,7 +64,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		nil,        // Arguments
 	)
 	if err != nil {
-		zap.L().Sugar().Error(err)
+		log.Println("RabbitMQ consume error:", err)
 		return
 	}
 
@@ -67,16 +82,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Wait for WebSocket connection to close
 	_, _, err = conn.ReadMessage()
 	if err != nil {
-		// Check if the error is "websocket: close 1001 (going away)"
-		closeErr, ok := err.(*websocket.CloseError)
-		if ok && closeErr.Code == websocket.CloseGoingAway {
-			zap.L().Sugar().Info("WebSocket connection closed: going away")
-			// Perform any necessary cleanup or handling for the "going away" scenario
-		} else {
-			zap.L().Sugar().Error(err)
-		}
-
-		// Close the WebSocket connection
+		zap.L().Sugar().Error(err)
+		//close websocket
 		conn.Close()
 		return
 	}
