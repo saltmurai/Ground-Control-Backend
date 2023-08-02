@@ -60,6 +60,25 @@ func GetSequences(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonString)
 }
 
+func DeleteSequence(w http.ResponseWriter, r *http.Request) {
+	queries := database.GetQueries()
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		zap.L().Sugar().Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = queries.DeleteSequence(r.Context(), int64(id))
+	if err != nil {
+		zap.L().Sugar().Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func sendFlagToDrone(w http.ResponseWriter, r *http.Request) {
 	queries := database.GetQueries()
 	flag := chi.URLParam(r, "flag")

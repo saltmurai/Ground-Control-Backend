@@ -28,14 +28,16 @@ INSERT INTO missions (
 		package_id,
 		seq_id,
 		image_folder,
-		status
+		status,
+		path
 ) VALUES (
 		$1,
 		$2,
 		$3,
 		$4,
 		$5,
-		$6
+		$6,
+		$7
 ) RETURNING *;
 
 -- name: DeleteMission :one
@@ -155,3 +157,7 @@ INSERT INTO users (
 -- name: ListUsers :many
 SELECT * FROM users;
 
+-- name: DeleteSequence :many
+DELETE FROM sequences
+WHERE id = $1
+RETURNING *;

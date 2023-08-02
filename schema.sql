@@ -32,7 +32,7 @@ CREATE TABLE "missions"(
     "seq_id" BIGINT NOT NULL,
     "image_folder" VARCHAR(255) NOT NULL,
     "status" VARCHAR(255) NOT NULL,
-    "path" jsonb NOT NULL
+    "path" jsonb
 );
 ALTER TABLE
     "missions" ADD PRIMARY KEY("id");

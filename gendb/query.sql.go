@@ -63,6 +63,41 @@ func (q *Queries) DeleteMission(ctx context.Context, id int64) (Mission, error) 
 	return i, err
 }
 
+const deleteSequence = `-- name: DeleteSequence :many
+DELETE FROM sequences
+WHERE id = $1
+RETURNING id, name, description, seq, length
+`
+
+func (q *Queries) DeleteSequence(ctx context.Context, id int64) ([]Sequence, error) {
+	rows, err := q.db.QueryContext(ctx, deleteSequence, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Sequence
+	for rows.Next() {
+		var i Sequence
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Seq,
+			&i.Length,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDroneByID = `-- name: GetDroneByID :one
 SELECT id, name, address, ip, status, port FROM drones
 WHERE id = $1 LIMIT 1
@@ -181,14 +216,16 @@ INSERT INTO missions (
 		package_id,
 		seq_id,
 		image_folder,
-		status
+		status,
+		path
 ) VALUES (
 		$1,
 		$2,
 		$3,
 		$4,
 		$5,
-		$6
+		$6,
+		$7
 ) RETURNING id, name, drone_id, package_id, seq_id, image_folder, status, path
 `
 
@@ -199,6 +236,7 @@ type InsertMissionParams struct {
 	SeqID       int64
 	ImageFolder string
 	Status      string
+	Path        json.RawMessage
 }
 
 func (q *Queries) InsertMission(ctx context.Context, arg InsertMissionParams) (Mission, error) {
@@ -209,6 +247,7 @@ func (q *Queries) InsertMission(ctx context.Context, arg InsertMissionParams) (M
 		arg.SeqID,
 		arg.ImageFolder,
 		arg.Status,
+		arg.Path,
 	)
 	var i Mission
 	err := row.Scan(

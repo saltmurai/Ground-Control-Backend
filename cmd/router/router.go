@@ -21,6 +21,7 @@ func CreateRouter(ctx context.Context) *chi.Mux {
 	// ================== SEQUENCES API ==================
 	r.Post("/sequences", AddSequences)
 	r.Get("/sequences", GetSequences)
+	r.Delete("/sequences", DeleteSequence)
 
 	// ================== MISSIONS API ==================
 	r.Get("/missions", GetMissions)

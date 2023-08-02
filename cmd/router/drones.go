@@ -16,6 +16,7 @@ type DroneWithTelemetries struct {
 	Position   string `json:"Position"`
 	Battery    string `json:"Battery"`
 	FlightMode string `json:"FlightMode"`
+	HeadingDeg string `json:"HeadingDeg"`
 }
 
 func AddDrone(w http.ResponseWriter, r *http.Request) {
@@ -103,6 +104,7 @@ func Telemetry(w http.ResponseWriter, r *http.Request) {
 		positionKey := fmt.Sprintf("%d-%s", drone.ID, "postion")
 		batteryKey := fmt.Sprintf("%d-%s", drone.ID, "battery")
 		flightModeKey := fmt.Sprintf("%d-%s", drone.ID, "flight_mode")
+		headingDegKey := fmt.Sprintf("%d-%s", drone.ID, "heading_deg")
 
 		// check if exists in redis
 		exists, err := redisClient.Exists(ctx, positionKey).Result()
@@ -151,12 +153,28 @@ func Telemetry(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		exists, err = redisClient.Exists(ctx, headingDegKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if exists == 0 {
+			continue
+		}
+		headingDeg, err := redisClient.Get(ctx, headingDegKey).Result()
+		if err != nil {
+			zap.L().Sugar().Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		activeDronesWithTelemetries = append(activeDronesWithTelemetries, DroneWithTelemetries{
 			Drone:      drone,
 			Position:   position,
 			Battery:    battery,
 			FlightMode: flightMode,
+			HeadingDeg: headingDeg,
 		})
 	}
 

@@ -54,6 +54,7 @@ func AddMission(w http.ResponseWriter, r *http.Request) {
 		DroneID:   missions.DroneID,
 		PackageID: missions.PackageID,
 		Status:    "pending",
+		Path:      missions.Path,
 	})
 	if err != nil {
 		zap.L().Sugar().Error(err)
