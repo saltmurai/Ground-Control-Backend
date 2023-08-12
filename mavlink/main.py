@@ -119,6 +119,23 @@ async def get_heading(drone, websocket, id, r):
             print(e)
 
 
+async def get_status(drone, websocket, id, r):
+    async for status_text in drone.telemetry.StatusText():
+        # data["status_text"] = extract_float_from_string(str(heading_deg))
+        data = {
+            "drone_id": id,
+            "type": "status_text",
+        }
+        try:
+            data["data"] = str(status_text)
+            await websocket.send(json.dumps(data))
+            # await r.set(f"{str(id)}-heading_deg", json.dumps(data))
+        except websockets.exceptions.ConnectionClosed:
+            break
+        except Exception as e:
+            print(e)
+
+
 async def get_battery(drone, websocket, id, r):
     data = {
         "drone_id": id,
@@ -184,10 +201,14 @@ async def forward_telemetry_data(websocket, path):
             heading_task = asyncio.create_task(
                 get_heading(drone, websocket, ids[addresses.index(address)], r)
             )
+            status_task = asyncio.create_task(
+                get_status(drone, websocket, ids[addresses.index(address)], r)
+            )
             tasks.append(position_task)
             tasks.append(heading_task)
             tasks.append(battery_task)
             tasks.append(flight_mode_task)
+            tasks.append(status_task)
 
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
