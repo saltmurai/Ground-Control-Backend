@@ -15,13 +15,12 @@ services:
     image: redis:alpine
     ports:
       - "6379:6379"
-  # incase you want to use local rabbitmq
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
       - "15672:15672"
       - "5672:5672"
-    attach: true
+    attach: false
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "5672"]
       interval: 5s
@@ -36,7 +35,7 @@ services:
     volumes:
       - ./:/app
     command: air
-    restart: on-failure
+    restart: always
     network_mode: host
     depends_on:
       - db
