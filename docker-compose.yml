@@ -7,7 +7,6 @@ services:
       - .env
     ports:
       - "3002:3002"
-
     volumes:
       - ./:/app
     command: air
@@ -16,6 +15,7 @@ services:
     depends_on:
       - db
       - redis
+      - rabbitmq
   db:
     image: postgres:alpine
     environment:
