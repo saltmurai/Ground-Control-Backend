@@ -16,7 +16,6 @@ services:
     depends_on:
       - db
       - redis
-      # - rabbitmq
   db:
     image: postgres:alpine
     environment:
@@ -32,18 +31,13 @@ services:
     ports:
       - "6379:6379"
   # incase you want to use local rabbitmq
-  # rabbitmq:
-  #   image: rabbitmq:3-management-alpine
-  #   ports:
-  #     - "15672:15672"
-  #     - "5672:5672"
-  #   volumes:
-  #     - rabbitmq-data:/var/lib/rabbitmq
-  #   healthcheck:
-  #     test: ["CMD", "nc", "-z", "localhost", "5672"]
-  #     interval: 5s
-  #     timeout: 15s
-  #     retries: 3
-volumes:
-  postgres-db:
-  rabbitmq-data:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5672"]
+      interval: 5s
+      timeout: 15s
+      retries: 3

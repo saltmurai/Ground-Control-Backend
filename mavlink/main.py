@@ -8,6 +8,11 @@ import aioredis
 import re
 
 
+DB_HOST="localhost"
+DB_USER="saltmurai"
+DB_PASSWORD="saltmurai"
+DB_NAME="gcs"
+
 def extract_float_from_string(input_string):
     match = re.search(r"\d+\.\d+", input_string)
     if match:
@@ -36,10 +41,10 @@ async def connect_to_redis():
 async def connect_to_database():
     print("Connecting to the database...")
     conn = await asyncpg.connect(
-        user="saltmurai",
-        password="saltmurai",
-        database="saltmurai",
-        host="localhost",
+        user=DB_USER,
+        password=DB_NAME,
+        database=DB_NAME,
+        host=DB_HOST,
         port="5432",
     )
     print("Connected to the database")
