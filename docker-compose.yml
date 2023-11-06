@@ -1,21 +1,6 @@
 version: "3.8"
 
 services:
-  web:
-    build: .
-    env_file:
-      - .env
-    ports:
-      - "3002:3002"
-    volumes:
-      - ./:/app
-    command: air
-    restart: on-failure
-    network_mode: host
-    depends_on:
-      - db
-      - redis
-      - rabbitmq
   db:
     image: postgres:alpine
     environment:
@@ -36,12 +21,26 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-    logging:
-      driver: none
+    attach: true
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "5672"]
       interval: 5s
       timeout: 15s
       retries: 3
+  web:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./:/app
+    command: air
+    restart: on-failure
+    network_mode: host
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
 volumes:
   postgres-db:
