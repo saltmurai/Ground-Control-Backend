@@ -29,6 +29,5 @@ services:
     depends_on:
       - db
       - redis
-      - rabbitmq
 volumes:
   postgres-db:
