@@ -64,6 +64,7 @@ message ActionInstruction {
   Action action = 1;
   repeated int32 package = 2;
 	double param = 3;
+	Termination terminate = 4;
 }
 
 message SequenceItem {
